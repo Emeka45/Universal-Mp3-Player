@@ -245,6 +245,7 @@ public class MainActivity extends Activity {
                     try { mp.reset(); mp.release(); } catch (Exception ignored) {}
                     nativePlayer = null;
                     nativeMediaId = -1;
+                    if (nativeAudioFd != null) { try { nativeAudioFd.close(); } catch (Exception ignored) {} nativeAudioFd = null; }
                     if (!fromTempFile) {
                         copyMediaToCacheAndPlay(mediaUri, mediaId);
                     } else {
@@ -290,8 +291,6 @@ public class MainActivity extends Activity {
                     }
                     java.io.File ready = temp;
                     runOnUiThread(() -> {
-                        nativeTempFile = ready;
-                        try { releaseNativePlayer(); } catch (Exception ignored) {}
                         nativeTempFile = ready;
                         startNativePlayback(mediaUri, mediaId, true);
                     });
