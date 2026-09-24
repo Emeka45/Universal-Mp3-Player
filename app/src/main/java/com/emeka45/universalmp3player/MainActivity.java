@@ -43,6 +43,7 @@ public class MainActivity extends Activity {
     private android.media.MediaPlayer nativePlayer;
     private long nativeMediaId = -1;
     private AssetFileDescriptor nativeAudioFd;
+    private java.io.File nativeTempFile;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -144,6 +145,7 @@ public class MainActivity extends Activity {
     private void releaseNativePlayer() {
         if (nativePlayer != null) { try { nativePlayer.stop(); } catch (Exception ignored) {} try { nativePlayer.reset(); } catch (Exception ignored) {} try { nativePlayer.release(); } catch (Exception ignored) {} nativePlayer = null; }
         if (nativeAudioFd != null) { try { nativeAudioFd.close(); } catch (Exception ignored) {} nativeAudioFd = null; }
+        if (nativeTempFile != null) { try { nativeTempFile.delete(); } catch (Exception ignored) {} nativeTempFile = null; }
         nativeMediaId = -1;
     }
 
@@ -205,25 +207,101 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 try {
                     releaseNativePlayer();
-                    Uri collection = Build.VERSION.SDK_INT >= 29 ? MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL) : MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+                    Uri collection = Build.VERSION.SDK_INT >= 29
+                            ? MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+                            : MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
                     Uri mediaUri = ContentUris.withAppendedId(collection, mediaId);
-                    android.media.MediaPlayer player = new android.media.MediaPlayer();
-                    player.setAudioAttributes(new android.media.AudioAttributes.Builder().setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC).setUsage(android.media.AudioAttributes.USAGE_MEDIA).build());
-                    player.setOnPreparedListener(mp -> { nativePlayer = mp; nativeMediaId = mediaId; mp.start(); if (webView != null) webView.evaluateJavascript("window.nativePlaybackReady && window.nativePlaybackReady();", null); });
-                    player.setOnCompletionListener(mp -> { nativeMediaId = -1; if (webView != null) webView.evaluateJavascript("window.nativePlaybackEnded && window.nativePlaybackEnded();", null); try { mp.release(); } catch (Exception ignored) {} nativePlayer = null; if(nativeAudioFd!=null){try{nativeAudioFd.close();}catch(Exception ignored){}} nativeAudioFd=null; });
-                    player.setOnErrorListener((mp, what, extra) -> { try { mp.reset(); mp.release(); } catch (Exception ignored) {} nativePlayer = null; nativeMediaId = -1; if(nativeAudioFd!=null){try{nativeAudioFd.close();}catch(Exception ignored){}} nativeAudioFd=null; nativeError("Android audio engine error (" + what + ", " + extra + ")"); return true; });
-                    // Keep the MediaStore file descriptor open until playback ends.
-                    // This is more reliable than a WebView/content-URI data source on low-end
-                    // Android devices and avoids descriptor lifetime problems during prepareAsync().
-                    AssetFileDescriptor afd = getContentResolver().openAssetFileDescriptor(mediaUri, "r");
-                    if (afd == null) throw new Exception("Android could not open this audio file");
-                    nativeAudioFd = afd;
-                    if (afd.getLength() >= 0) player.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
-                    else player.setDataSource(afd.getFileDescriptor());
-                    nativePlayer = player; nativeMediaId = mediaId; player.prepareAsync();
-                } catch (Exception e) { releaseNativePlayer(); nativeError("Could not play this song: " + e.getMessage()); }
+                    startNativePlayback(mediaUri, mediaId, false);
+                } catch (Exception e) {
+                    releaseNativePlayer();
+                    nativeError("Could not play this song: " + e.getMessage());
+                }
             });
         }
+
+        private void startNativePlayback(Uri mediaUri, long mediaId, boolean fromTempFile) {
+            try {
+                android.media.MediaPlayer player = new android.media.MediaPlayer();
+                player.setAudioAttributes(new android.media.AudioAttributes.Builder()
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .setUsage(android.media.AudioAttributes.USAGE_MEDIA).build());
+                player.setOnPreparedListener(mp -> {
+                    nativePlayer = mp;
+                    nativeMediaId = mediaId;
+                    mp.start();
+                    if (webView != null) webView.evaluateJavascript(
+                            "window.nativePlaybackReady && window.nativePlaybackReady();", null);
+                });
+                player.setOnCompletionListener(mp -> {
+                    nativeMediaId = -1;
+                    if (webView != null) webView.evaluateJavascript(
+                            "window.nativePlaybackEnded && window.nativePlaybackEnded();", null);
+                    try { mp.release(); } catch (Exception ignored) {}
+                    nativePlayer = null;
+                    if (nativeAudioFd != null) { try { nativeAudioFd.close(); } catch (Exception ignored) {} nativeAudioFd = null; }
+                    if (nativeTempFile != null) { try { nativeTempFile.delete(); } catch (Exception ignored) {} nativeTempFile = null; }
+                });
+                player.setOnErrorListener((mp, what, extra) -> {
+                    try { mp.reset(); mp.release(); } catch (Exception ignored) {}
+                    nativePlayer = null;
+                    nativeMediaId = -1;
+                    if (!fromTempFile) {
+                        copyMediaToCacheAndPlay(mediaUri, mediaId);
+                    } else {
+                        nativeError("Android audio engine error (" + what + ", " + extra + ")");
+                    }
+                    return true;
+                });
+
+                if (fromTempFile) {
+                    if (nativeTempFile == null) throw new java.io.FileNotFoundException("Temporary audio file is missing");
+                    player.setDataSource(nativeTempFile.getAbsolutePath());
+                } else {
+                    // Keep the provider descriptor alive through prepare/playback. Some
+                    // low-end Android builds fail if the descriptor is closed too early.
+                    AssetFileDescriptor afd = getContentResolver().openAssetFileDescriptor(mediaUri, "r");
+                    if (afd == null) throw new java.io.FileNotFoundException("Android could not open this audio file");
+                    nativeAudioFd = afd;
+                    if (afd.getLength() >= 0) player.setDataSource(
+                            afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                    else player.setDataSource(afd.getFileDescriptor());
+                }
+                nativePlayer = player;
+                nativeMediaId = mediaId;
+                player.prepareAsync();
+            } catch (Exception e) {
+                try { releaseNativePlayer(); } catch (Exception ignored) {}
+                if (!fromTempFile) copyMediaToCacheAndPlay(mediaUri, mediaId);
+                else nativeError("Could not play this song: " + e.getMessage());
+            }
+        }
+
+        private void copyMediaToCacheAndPlay(Uri mediaUri, long mediaId) {
+            io.execute(() -> {
+                java.io.File temp = null;
+                try {
+                    temp = java.io.File.createTempFile("universal_mp3_", ".mp3", getCacheDir());
+                    try (InputStream in = getContentResolver().openInputStream(mediaUri);
+                         OutputStream out = new java.io.FileOutputStream(temp)) {
+                        if (in == null) throw new java.io.FileNotFoundException("Cannot read the selected audio file");
+                        byte[] buffer = new byte[64 * 1024];
+                        int n;
+                        while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
+                    }
+                    java.io.File ready = temp;
+                    runOnUiThread(() -> {
+                        nativeTempFile = ready;
+                        try { releaseNativePlayer(); } catch (Exception ignored) {}
+                        nativeTempFile = ready;
+                        startNativePlayback(mediaUri, mediaId, true);
+                    });
+                } catch (Exception e) {
+                    if (temp != null) try { temp.delete(); } catch (Exception ignored) {}
+                    nativeError("Could not read this audio file: " + e.getMessage());
+                }
+            });
+        }
+
         @JavascriptInterface public void pauseMusic() { runOnUiThread(() -> { if (nativePlayer != null && nativePlayer.isPlaying()) nativePlayer.pause(); }); }
         @JavascriptInterface public void resumeMusic() { runOnUiThread(() -> { if (nativePlayer != null) { try { nativePlayer.start(); } catch (Exception e) { nativeError(e.getMessage()); } } }); }
         @JavascriptInterface public void seekMusic(int positionMs) { runOnUiThread(() -> { if (nativePlayer != null) { try { nativePlayer.seekTo(Math.max(0, positionMs)); } catch (Exception ignored) {} } }); }
