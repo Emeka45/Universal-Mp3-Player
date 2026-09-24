@@ -1,28 +1,39 @@
 # Universal MP3 Player
 
-A beautiful, responsive, local-first MP3 player for the Universal app family.
+A responsive, mobile-friendly Universal MP3 Player for music the user owns, is licensed to use, or that is legally available for playback/download.
 
-## Current foundation
-- Modern dark music-player interface
-- U branding
+## Current implementation
+- Modern dark U-branded music-player interface
 - Mobile-responsive layout
-- Add multiple MP3/audio files from the device
-- Play, pause, previous and next
-- Seek and volume controls
-- Search library
-- Favorites
-- Home, My Music and Favorites views
-- No upload of local audio files; playback uses browser/device object URLs
+- Local MP3/audio playback
+- Play, pause, previous, next, seek and volume controls
+- Library search and favorites
+- Home, Discover, My Music, Favorites and Downloads views
+- Online catalogue discovery using Apple's iTunes Search API
+- Preview playback and source links for catalogue results
+- Supported free-download discovery through the Internet Archive
+- MP3 download button only when a supported source exposes a downloadable MP3
+- Download history stored locally in the browser
+- No upload of local audio files
+
+## Important download rule
+
+The player does **not** rip Spotify, Apple Music, YouTube, or other protected streaming services. Catalogue metadata and preview URLs do not grant a right to download the full recording. Apple's Search API provides catalogue metadata and promotional previews under its own terms. The app therefore keeps catalogue previews as previews and only exposes a download action for supported sources that actually provide a downloadable audio file.
+
+## Current status
+
+The project is a working web application/prototype. It is **not yet an Android APK/release build**. The next engineering stage is packaging the player as a proper Android app, adding persistent local media storage, queue/playlist management, metadata/artwork handling, and automated build/release workflows.
 
 ## Roadmap
+- Android app packaging
+- Persistent local media library
 - ID3 metadata and embedded album artwork
-- Persistent library and playlists
-- Queue management
-- Mini-player and full-screen Now Playing view
+- Queue and playlists
+- Full-screen Now Playing
 - Audio visualizer
 - Sleep timer
 - Sort/filter by artist, album and genre
 - PWA/offline support
-- Optional legal online preview sources
+- More verified legal music sources
 
-The player is intended for music the user owns, has permission to use, or that is legally available for playback.
+The project is intended for lawful music playback and downloading only.
