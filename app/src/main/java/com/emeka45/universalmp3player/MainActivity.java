@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Intent;
+import android.content.res.AssetFileDescriptor;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
@@ -159,7 +160,8 @@ public class MainActivity extends Activity {
                     MediaStore.Audio.Media.ALBUM, MediaStore.Audio.Media.DURATION,
                     MediaStore.Audio.Media.MIME_TYPE, MediaStore.Audio.Media.RELATIVE_PATH
             };
-            try (Cursor c = getContentResolver().query(collection, projection, null, null,
+            String selection = MediaStore.Audio.Media.IS_MUSIC + " != 0 AND " + MediaStore.Audio.Media.SIZE + " > 0";
+            try (Cursor c = getContentResolver().query(collection, projection, selection, null,
                     MediaStore.Audio.Media.TITLE + " COLLATE NOCASE ASC")) {
                 if (c == null) return out.toString();
                 int idCol=c.getColumnIndexOrThrow(MediaStore.Audio.Media._ID);
@@ -208,7 +210,13 @@ public class MainActivity extends Activity {
                     player.setOnPreparedListener(mp -> { nativePlayer = mp; nativeMediaId = mediaId; mp.start(); if (webView != null) webView.evaluateJavascript("window.nativePlaybackReady && window.nativePlaybackReady();", null); });
                     player.setOnCompletionListener(mp -> { nativeMediaId = -1; if (webView != null) webView.evaluateJavascript("window.nativePlaybackEnded && window.nativePlaybackEnded();", null); try { mp.release(); } catch (Exception ignored) {} nativePlayer = null; });
                     player.setOnErrorListener((mp, what, extra) -> { try { mp.reset(); mp.release(); } catch (Exception ignored) {} nativePlayer = null; nativeMediaId = -1; nativeError("Android audio engine error (" + what + ", " + extra + ")"); return true; });
-                    player.setDataSource(MainActivity.this, mediaUri);
+                    AssetFileDescriptor afd = getContentResolver().openAssetFileDescriptor(mediaUri, "r");
+                    if (afd == null) throw new Exception("The audio file could not be opened");
+                    try {
+                        player.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                    } finally {
+                        try { afd.close(); } catch (Exception ignored) {}
+                    }
                     nativePlayer = player; nativeMediaId = mediaId; player.prepareAsync();
                 } catch (Exception e) { releaseNativePlayer(); nativeError("Could not play this song: " + e.getMessage()); }
             });
