@@ -25,6 +25,10 @@ import org.json.JSONObject;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,6 +54,14 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
+                if ("https".equalsIgnoreCase(uri.getScheme()) && "universal.local".equalsIgnoreCase(uri.getHost()) && uri.getPath()!=null && uri.getPath().startsWith("/media/")) {
+                    try {
+                        long mediaId=Long.parseLong(uri.getPath().substring("/media/".length()));
+                        Uri collection=Build.VERSION.SDK_INT>=29?MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL):MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+                        InputStream stream=getContentResolver().openInputStream(ContentUris.withAppendedId(collection,mediaId));
+                        if(stream!=null) return new WebResourceResponse("audio/mpeg",null,stream);
+                    } catch(Exception ignored) {}
+                }
                 if ("content".equalsIgnoreCase(uri.getScheme()) && "media".equalsIgnoreCase(uri.getAuthority())) {
                     try {
                         InputStream stream = getContentResolver().openInputStream(uri);
@@ -141,6 +153,64 @@ public class MainActivity extends Activity {
                 }
             } catch(Exception ignored) {}
             return out.toString();
+        }
+
+        @JavascriptInterface public String searchCatalog(String query) {
+            JSONArray out=new JSONArray();
+            if(query==null||query.trim().isEmpty()) return out.toString();
+            HttpURLConnection conn=null;
+            try {
+                String q=URLEncoder.encode(query.trim(),"UTF-8");
+                URL u=new URL("https://itunes.apple.com/search?term="+q+"&entity=song&limit=30");
+                conn=(HttpURLConnection)u.openConnection();
+                conn.setConnectTimeout(12000); conn.setReadTimeout(20000);
+                conn.setRequestProperty("User-Agent","Universal-MP3-Player/1.0");
+                if(conn.getResponseCode()>=200&&conn.getResponseCode()<300){
+                    String body=readAll(conn.getInputStream());
+                    JSONObject root=new JSONObject(body);
+                    return root.optJSONArray("results")==null?out.toString():root.optJSONArray("results").toString();
+                }
+            } catch(Exception ignored) {} finally {if(conn!=null)conn.disconnect();}
+            return out.toString();
+        }
+
+        @JavascriptInterface public String searchFreeMusic(String query) {
+            JSONArray out=new JSONArray();
+            if(query==null||query.trim().isEmpty()) return out.toString();
+            try {
+                String q=URLEncoder.encode("mediatype:audio AND "+query.trim(),"UTF-8");
+                HttpURLConnection c=(HttpURLConnection)new URL("https://archive.org/advancedsearch.php?q="+q+"&fl[]=identifier&fl[]=title&fl[]=creator&rows=12&output=json").openConnection();
+                c.setConnectTimeout(12000); c.setReadTimeout(20000); c.setRequestProperty("User-Agent","Universal-MP3-Player/1.0");
+                if(c.getResponseCode()<200||c.getResponseCode()>=300)return out.toString();
+                JSONArray docs=new JSONObject(readAll(c.getInputStream())).optJSONObject("response").optJSONArray("docs");
+                if(docs==null)return out.toString();
+                for(int i=0;i<Math.min(12,docs.length());i++){
+                    JSONObject d=docs.getJSONObject(i); String id=d.optString("identifier");
+                    if(id.isEmpty())continue;
+                    try{
+                        HttpURLConnection mc=(HttpURLConnection)new URL("https://archive.org/metadata/"+URLEncoder.encode(id,"UTF-8")).openConnection();
+                        mc.setConnectTimeout(8000);mc.setReadTimeout(12000);mc.setRequestProperty("User-Agent","Universal-MP3-Player/1.0");
+                        if(mc.getResponseCode()<200||mc.getResponseCode()>=300){mc.disconnect();continue;}
+                        JSONArray files=new JSONObject(readAll(mc.getInputStream())).optJSONArray("files"); mc.disconnect();
+                        if(files==null)continue;
+                        for(int k=0;k<files.length();k++){
+                            JSONObject f=files.getJSONObject(k);String name=f.optString("name");
+                            if(name.toLowerCase(Locale.US).endsWith(".mp3")&&f.optLong("size",0)>0){
+                                JSONObject o=new JSONObject();o.put("identifier",id);o.put("title",d.optString("title",id));o.put("artist",d.optString("creator","Unknown artist"));
+                                o.put("source","Internet Archive");o.put("downloadUrl","https://archive.org/download/"+id+"/"+name.replace(" ","%20"));
+                                out.put(o);break;
+                            }
+                        }
+                    }catch(Exception ignored){}
+                }
+            }catch(Exception ignored){}
+            return out.toString();
+        }
+
+        private String readAll(InputStream in) throws Exception {
+            StringBuilder b=new StringBuilder();byte[] buf=new byte[8192];int n;
+            while((n=in.read(buf))!=-1)b.append(new String(buf,0,n,StandardCharsets.UTF_8));
+            in.close();return b.toString();
         }
 
         @JavascriptInterface public void downloadMusic(String url, String title, String mime) {
