@@ -16,7 +16,7 @@
   <div class="sidebar-bottom"><button id="themeBtn" class="ghost-btn">☾ <span>Appearance</span></button></div>
 </aside>
 <main class="main">
-<header class="topbar"><div class="mobile-brand"><div class="brand-mark">U</div><strong>Universal MP3</strong></div><label class="search"><span>⌕</span><input id="searchInput" type="search" placeholder="Search your music or discover new songs…" autocomplete="off"></label><button id="addBtn" class="primary-btn">＋ Add music</button></header>
+<header class="topbar"><div class="mobile-brand"><div class="brand-mark">U</div><strong>Universal MP3</strong></div><label class="search"><span>⌕</span><input id="searchInput" type="search" placeholder="Search your music or discover new songs…" autocomplete="off"><button id="searchBtn" class="small-btn">Search online</button></label><button id="addBtn" class="primary-btn">＋ Add music</button></header>
 
 <section id="homeView" class="view active-view">
   <div class="hero"><div><p class="eyebrow">YOUR MUSIC · YOUR WAY</p><h1>A real music library.</h1><p>Automatically scan the music already on your phone, organise it into albums and artists, play it immediately, and discover downloadable music from supported legal sources.</p><div class="hero-actions"><button id="heroAddBtn" class="primary-btn">＋ Add music</button><button id="heroDiscoverBtn" class="secondary-btn">Explore music</button></div></div><div class="hero-disc"><div class="disc-center">U</div></div></div>
@@ -66,6 +66,14 @@
 <input id="fileInput" type="file" accept="audio/*,.mp3,.m4a,.flac,.wav,.ogg,.opus,.aac" multiple hidden>
 </main></div>
 
+<nav class="mobile-nav">
+  <button class="mobile-nav-item active" data-view="home">⌂<span>Home</span></button>
+  <button class="mobile-nav-item" data-view="discover">⌕<span>Discover</span></button>
+  <button class="mobile-nav-item" data-view="library">♫<span>Library</span></button>
+  <button class="mobile-nav-item" data-view="favorites">♥<span>Liked</span></button>
+  <button class="mobile-nav-item" data-view="downloads">⇩<span>Downloads</span></button>
+  <button class="mobile-nav-item" data-view="settings">⚙<span>Settings</span></button>
+</nav>
 <div class="queue-drawer" id="queueDrawer"><div class="queue-head"><strong>Up next</strong><button id="closeQueue" class="icon-btn">×</button></div><div id="queueList"></div></div>
 <div class="player" id="playerBar">
  <div class="now-playing"><div class="mini-cover" id="miniCover">♫</div><div class="now-text"><strong id="nowTitle">Nothing playing</strong><span id="nowArtist">Choose a song to begin</span></div><button id="likeBtn" class="icon-btn" aria-label="Favorite">♡</button></div>
