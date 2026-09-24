@@ -147,7 +147,7 @@ public class MainActivity extends Activity {
                     o.put("folder",pathCol>=0 && !c.isNull(pathCol)?c.getString(pathCol):"Music");
                     o.put("duration",c.isNull(durationCol)?0:c.getLong(durationCol)/1000.0);
                     o.put("mime",c.isNull(mimeCol)?"audio/mpeg":c.getString(mimeCol));
-                    o.put("url",ContentUris.withAppendedId(collection,id).toString());
+                    o.put("url","https://universal.local/media/"+id);
                     o.put("native",true);
                     out.put(o);
                 }
@@ -184,7 +184,7 @@ public class MainActivity extends Activity {
                 if(c.getResponseCode()<200||c.getResponseCode()>=300)return out.toString();
                 JSONArray docs=new JSONObject(readAll(c.getInputStream())).optJSONObject("response").optJSONArray("docs");
                 if(docs==null)return out.toString();
-                for(int i=0;i<Math.min(12,docs.length());i++){
+                for(int i=0;i<Math.min(5,docs.length());i++){
                     JSONObject d=docs.getJSONObject(i); String id=d.optString("identifier");
                     if(id.isEmpty())continue;
                     try{
