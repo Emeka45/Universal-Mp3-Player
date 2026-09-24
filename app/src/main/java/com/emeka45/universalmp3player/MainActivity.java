@@ -210,13 +210,10 @@ public class MainActivity extends Activity {
                     player.setOnPreparedListener(mp -> { nativePlayer = mp; nativeMediaId = mediaId; mp.start(); if (webView != null) webView.evaluateJavascript("window.nativePlaybackReady && window.nativePlaybackReady();", null); });
                     player.setOnCompletionListener(mp -> { nativeMediaId = -1; if (webView != null) webView.evaluateJavascript("window.nativePlaybackEnded && window.nativePlaybackEnded();", null); try { mp.release(); } catch (Exception ignored) {} nativePlayer = null; });
                     player.setOnErrorListener((mp, what, extra) -> { try { mp.reset(); mp.release(); } catch (Exception ignored) {} nativePlayer = null; nativeMediaId = -1; nativeError("Android audio engine error (" + what + ", " + extra + ")"); return true; });
-                    AssetFileDescriptor afd = getContentResolver().openAssetFileDescriptor(mediaUri, "r");
-                    if (afd == null) throw new Exception("The audio file could not be opened");
-                    try {
-                        player.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
-                    } finally {
-                        try { afd.close(); } catch (Exception ignored) {}
-                    }
+                    // Use MediaPlayer's ContentResolver-aware URI data source. Do not close an
+                    // AssetFileDescriptor before prepareAsync(): doing so can invalidate the
+                    // underlying file descriptor on Android and make local songs silently fail.
+                    player.setDataSource(MainActivity.this, mediaUri);
                     nativePlayer = player; nativeMediaId = mediaId; player.prepareAsync();
                 } catch (Exception e) { releaseNativePlayer(); nativeError("Could not play this song: " + e.getMessage()); }
             });
