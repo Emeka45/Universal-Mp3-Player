@@ -39,6 +39,8 @@ public class MainActivity extends Activity {
     private WebView webView;
     private static final int AUDIO_PERMISSION = 2001;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
+    private android.media.MediaPlayer nativePlayer;
+    private long nativeMediaId = -1;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -137,6 +139,13 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void releaseNativePlayer() {
+        if (nativePlayer != null) { try { nativePlayer.stop(); } catch (Exception ignored) {} try { nativePlayer.release(); } catch (Exception ignored) {} nativePlayer = null; }
+        nativeMediaId = -1;
+    }
+
+    private void nativeError(String message) { if (webView != null) webView.post(() -> webView.evaluateJavascript("window.nativePlaybackError && window.nativePlaybackError(" + JSONObject.quote(message) + ");", null)); }
+
     public class NativeBridge {
         @JavascriptInterface public String scanMusic() {
             JSONArray out = new JSONArray();
@@ -187,6 +196,30 @@ public class MainActivity extends Activity {
             } catch(Exception ignored) {}
             return out.toString();
         }
+
+        @JavascriptInterface public void playMusic(long mediaId) {
+            runOnUiThread(() -> {
+                try {
+                    releaseNativePlayer();
+                    Uri collection = Build.VERSION.SDK_INT >= 29 ? MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL) : MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+                    Uri mediaUri = ContentUris.withAppendedId(collection, mediaId);
+                    android.media.MediaPlayer player = new android.media.MediaPlayer();
+                    player.setAudioAttributes(new android.media.AudioAttributes.Builder().setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC).setUsage(android.media.AudioAttributes.USAGE_MEDIA).build());
+                    player.setOnPreparedListener(mp -> { nativePlayer = mp; nativeMediaId = mediaId; mp.start(); if (webView != null) webView.evaluateJavascript("window.nativePlaybackReady && window.nativePlaybackReady();", null); });
+                    player.setOnCompletionListener(mp -> { nativeMediaId = -1; if (webView != null) webView.evaluateJavascript("window.nativePlaybackEnded && window.nativePlaybackEnded();", null); try { mp.release(); } catch (Exception ignored) {} nativePlayer = null; });
+                    player.setOnErrorListener((mp, what, extra) -> { try { mp.reset(); mp.release(); } catch (Exception ignored) {} nativePlayer = null; nativeMediaId = -1; nativeError("Android audio engine error (" + what + ", " + extra + ")"); return true; });
+                    player.setDataSource(MainActivity.this, mediaUri);
+                    nativePlayer = player; nativeMediaId = mediaId; player.prepareAsync();
+                } catch (Exception e) { releaseNativePlayer(); nativeError("Could not play this song: " + e.getMessage()); }
+            });
+        }
+        @JavascriptInterface public void pauseMusic() { runOnUiThread(() -> { if (nativePlayer != null && nativePlayer.isPlaying()) nativePlayer.pause(); }); }
+        @JavascriptInterface public void resumeMusic() { runOnUiThread(() -> { if (nativePlayer != null) { try { nativePlayer.start(); } catch (Exception e) { nativeError(e.getMessage()); } } }); }
+        @JavascriptInterface public void seekMusic(int positionMs) { runOnUiThread(() -> { if (nativePlayer != null) { try { nativePlayer.seekTo(Math.max(0, positionMs)); } catch (Exception ignored) {} } }); }
+        @JavascriptInterface public boolean isNativePlaying() { try { return nativePlayer != null && nativePlayer.isPlaying(); } catch (Exception e) { return false; } }
+        @JavascriptInterface public int nativePosition() { try { return nativePlayer == null ? 0 : nativePlayer.getCurrentPosition(); } catch (Exception e) { return 0; } }
+        @JavascriptInterface public int nativeDuration() { try { return nativePlayer == null ? 0 : nativePlayer.getDuration(); } catch (Exception e) { return 0; } }
+        @JavascriptInterface public long nativePlayingId() { return nativeMediaId; }
 
         @JavascriptInterface public String searchCatalog(String query) {
             JSONArray out=new JSONArray();
@@ -318,6 +351,6 @@ public class MainActivity extends Activity {
         }
         fileCallback.onReceiveValue(result); fileCallback=null;
     }
-    @Override protected void onDestroy(){io.shutdownNow();super.onDestroy();}
+    @Override protected void onDestroy(){releaseNativePlayer();io.shutdownNow();super.onDestroy();}
     @Override public void onBackPressed(){if(webView.canGoBack())webView.goBack();else super.onBackPressed();}
 }
