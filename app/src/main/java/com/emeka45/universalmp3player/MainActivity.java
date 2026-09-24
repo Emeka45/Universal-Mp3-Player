@@ -42,6 +42,7 @@ public class MainActivity extends Activity {
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private android.media.MediaPlayer nativePlayer;
     private long nativeMediaId = -1;
+    private AssetFileDescriptor nativeAudioFd;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -141,7 +142,8 @@ public class MainActivity extends Activity {
     }
 
     private void releaseNativePlayer() {
-        if (nativePlayer != null) { try { nativePlayer.stop(); } catch (Exception ignored) {} try { nativePlayer.release(); } catch (Exception ignored) {} nativePlayer = null; }
+        if (nativePlayer != null) { try { nativePlayer.stop(); } catch (Exception ignored) {} try { nativePlayer.reset(); } catch (Exception ignored) {} try { nativePlayer.release(); } catch (Exception ignored) {} nativePlayer = null; }
+        if (nativeAudioFd != null) { try { nativeAudioFd.close(); } catch (Exception ignored) {} nativeAudioFd = null; }
         nativeMediaId = -1;
     }
 
@@ -160,7 +162,7 @@ public class MainActivity extends Activity {
                     MediaStore.Audio.Media.ALBUM, MediaStore.Audio.Media.DURATION,
                     MediaStore.Audio.Media.MIME_TYPE, MediaStore.Audio.Media.RELATIVE_PATH
             };
-            String selection = MediaStore.Audio.Media.IS_MUSIC + " != 0 AND " + MediaStore.Audio.Media.SIZE + " > 0";
+            String selection = MediaStore.Audio.Media.SIZE + " > 0";
             try (Cursor c = getContentResolver().query(collection, projection, selection, null,
                     MediaStore.Audio.Media.TITLE + " COLLATE NOCASE ASC")) {
                 if (c == null) return out.toString();
@@ -208,12 +210,16 @@ public class MainActivity extends Activity {
                     android.media.MediaPlayer player = new android.media.MediaPlayer();
                     player.setAudioAttributes(new android.media.AudioAttributes.Builder().setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC).setUsage(android.media.AudioAttributes.USAGE_MEDIA).build());
                     player.setOnPreparedListener(mp -> { nativePlayer = mp; nativeMediaId = mediaId; mp.start(); if (webView != null) webView.evaluateJavascript("window.nativePlaybackReady && window.nativePlaybackReady();", null); });
-                    player.setOnCompletionListener(mp -> { nativeMediaId = -1; if (webView != null) webView.evaluateJavascript("window.nativePlaybackEnded && window.nativePlaybackEnded();", null); try { mp.release(); } catch (Exception ignored) {} nativePlayer = null; });
-                    player.setOnErrorListener((mp, what, extra) -> { try { mp.reset(); mp.release(); } catch (Exception ignored) {} nativePlayer = null; nativeMediaId = -1; nativeError("Android audio engine error (" + what + ", " + extra + ")"); return true; });
-                    // Use MediaPlayer's ContentResolver-aware URI data source. Do not close an
-                    // AssetFileDescriptor before prepareAsync(): doing so can invalidate the
-                    // underlying file descriptor on Android and make local songs silently fail.
-                    player.setDataSource(MainActivity.this, mediaUri);
+                    player.setOnCompletionListener(mp -> { nativeMediaId = -1; if (webView != null) webView.evaluateJavascript("window.nativePlaybackEnded && window.nativePlaybackEnded();", null); try { mp.release(); } catch (Exception ignored) {} nativePlayer = null; if(nativeAudioFd!=null){try{nativeAudioFd.close();}catch(Exception ignored){}} nativeAudioFd=null; });
+                    player.setOnErrorListener((mp, what, extra) -> { try { mp.reset(); mp.release(); } catch (Exception ignored) {} nativePlayer = null; nativeMediaId = -1; if(nativeAudioFd!=null){try{nativeAudioFd.close();}catch(Exception ignored){}} nativeAudioFd=null; nativeError("Android audio engine error (" + what + ", " + extra + ")"); return true; });
+                    // Keep the MediaStore file descriptor open until playback ends.
+                    // This is more reliable than a WebView/content-URI data source on low-end
+                    // Android devices and avoids descriptor lifetime problems during prepareAsync().
+                    AssetFileDescriptor afd = getContentResolver().openAssetFileDescriptor(mediaUri, "r");
+                    if (afd == null) throw new Exception("Android could not open this audio file");
+                    nativeAudioFd = afd;
+                    if (afd.getLength() >= 0) player.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                    else player.setDataSource(afd.getFileDescriptor());
                     nativePlayer = player; nativeMediaId = mediaId; player.prepareAsync();
                 } catch (Exception e) { releaseNativePlayer(); nativeError("Could not play this song: " + e.getMessage()); }
             });
