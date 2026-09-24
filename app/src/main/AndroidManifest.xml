@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <application android:theme="@style/AppTheme" android:label="Universal MP3 Player" android:usesCleartextTraffic="false" android:allowBackup="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
