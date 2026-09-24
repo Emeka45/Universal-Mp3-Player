@@ -1,11 +1,75 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><meta name="theme-color" content="#0b0b12"/><meta name="description" content="Universal MP3 Player — discover, preview and play music, plus your local library."/><title>Universal MP3 Player</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="styles.css"/></head>
-<body><div class="app-shell"><aside class="sidebar"><div class="brand"><div class="brand-mark">U</div><div><strong>Universal</strong><span>MP3 Player</span></div></div><nav><button class="nav-item active" data-view="home">⌂ <span>Home</span></button><button class="nav-item" data-view="discover">⌕ <span>Discover</span></button><button class="nav-item" data-view="library">♫ <span>My Music</span></button><button class="nav-item" data-view="favorites">♡ <span>Favorites</span></button><button class="nav-item" data-view="downloads">⇩ <span>Downloads</span></button></nav><div class="sidebar-bottom"><button id="themeBtn" class="ghost-btn">☾ <span>Appearance</span></button></div></aside>
-<main class="main"><header class="topbar"><div class="mobile-brand"><div class="brand-mark">U</div><strong>Universal MP3</strong></div><label class="search"><span>⌕</span><input id="searchInput" type="search" placeholder="Search songs, artists or albums..." autocomplete="off"></label><button id="addBtn" class="primary-btn">＋ Add music</button></header>
-<section id="homeView" class="view active-view"><div class="hero"><div><p class="eyebrow">YOUR MUSIC. YOUR DISCOVERY.</p><h1>Listen beautifully.</h1><p>Play your collection and discover music from supported catalogues without turning the player into a ripper.</p><button id="heroAddBtn" class="primary-btn">＋ Add MP3 files</button></div><div class="hero-disc"><div class="disc-center">U</div></div></div><div class="section-head"><div><h2>Recently added</h2><p id="libraryCount">No music added yet</p></div></div><div id="trackGrid" class="track-grid"></div><div id="emptyState" class="empty-state"><div class="empty-icon">♫</div><h3>Your library is waiting</h3><p>Add MP3 files from your phone or computer to start listening.</p><button class="secondary-btn" id="emptyAddBtn">Choose MP3 files</button></div></section>
-<section id="discoverView" class="view"><div class="section-head"><div><p class="eyebrow">MUSIC DISCOVERY</p><h2>Find your next song</h2><p>Search songs, artists and albums. Results are catalog metadata with previews where the provider supplies them.</p></div></div><div class="discover-tabs"><button class="discover-tab active" data-type="all">All</button><button class="discover-tab" data-type="song">Songs</button><button class="discover-tab" data-type="album">Albums</button><button class="discover-tab" data-type="artist">Artists</button></div><div id="discoverStatus" class="discover-status">Search above to explore music.</div><div id="discoverGrid" class="discover-grid"></div><div class="section-head download-section-head"><div><h2>Free music downloads</h2><p id="freeDownloadStatus">Supported downloadable sources appear here when available.</p></div></div><div id="freeDownloadGrid" class="discover-grid"></div></section>
-<section id="libraryView" class="view"><div class="section-head"><div><h2>My Music</h2><p>All songs added to this session</p></div></div><div id="libraryList" class="library-list"></div></section>
-<section id="favoritesView" class="view"><div class="section-head"><div><h2>Favorites</h2><p>Songs you love</p></div></div><div id="favoritesList" class="library-list"></div></section>
-<section id="downloadsView" class="view"><div class="section-head"><div><h2>Downloads</h2><p>Music files downloaded through supported sources</p></div></div><div id="downloadsList" class="library-list"></div><div class="empty-state" id="downloadInfo"><div class="empty-icon">⇩</div><h3>Downloads stay yours</h3><p>Only files that a provider makes available for download will be offered here. Catalog metadata alone does not grant a download right.</p></div></section>
-<input id="fileInput" type="file" accept="audio/mpeg,audio/mp3,.mp3,audio/*" multiple hidden/></main></div>
-<div class="player" id="playerBar"><div class="now-playing"><div class="mini-cover" id="miniCover">♫</div><div class="now-text"><strong id="nowTitle">Nothing playing</strong><span id="nowArtist">Choose a song to begin</span></div><button id="likeBtn" class="icon-btn" aria-label="Favorite">♡</button></div><div class="controls"><div class="control-row"><button id="prevBtn" class="icon-btn">↶</button><button id="playBtn" class="play-btn">▶</button><button id="nextBtn" class="icon-btn">↷</button></div><div class="progress-row"><span id="currentTime">0:00</span><input id="progress" type="range" min="0" max="100" value="0"><span id="duration">0:00</span></div></div><div class="volume"><span>🔊</span><input id="volume" type="range" min="0" max="1" step="0.01" value="0.8"></div></div><audio id="audio" preload="metadata"></audio><script src="app.js"></script></body></html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="theme-color" content="#09090f"><meta name="description" content="Universal MP3 Player — local music library, discovery, playlists, downloads and powerful playback controls."><title>Universal MP3 Player</title><link rel="stylesheet" href="styles.css"></head>
+<body>
+<div class="app-shell">
+<aside class="sidebar">
+  <div class="brand"><div class="brand-mark">U</div><div><strong>Universal</strong><span>MP3 Player</span></div></div>
+  <nav>
+    <button class="nav-item active" data-view="home">⌂ <span>Home</span></button>
+    <button class="nav-item" data-view="discover">⌕ <span>Discover</span></button>
+    <button class="nav-item" data-view="library">♫ <span>Library</span></button>
+    <button class="nav-item" data-view="playlists">☷ <span>Playlists</span></button>
+    <button class="nav-item" data-view="favorites">♥ <span>Liked Songs</span></button>
+    <button class="nav-item" data-view="downloads">⇩ <span>Downloads</span></button>
+    <button class="nav-item" data-view="settings">⚙ <span>Settings</span></button>
+  </nav>
+  <div class="sidebar-bottom"><button id="themeBtn" class="ghost-btn">☾ <span>Appearance</span></button></div>
+</aside>
+<main class="main">
+<header class="topbar"><div class="mobile-brand"><div class="brand-mark">U</div><strong>Universal MP3</strong></div><label class="search"><span>⌕</span><input id="searchInput" type="search" placeholder="Search your music or discover new songs…" autocomplete="off"></label><button id="addBtn" class="primary-btn">＋ Add music</button></header>
+
+<section id="homeView" class="view active-view">
+  <div class="hero"><div><p class="eyebrow">YOUR MUSIC · YOUR WAY</p><h1>A real music library.</h1><p>Organise local music like a modern streaming player: albums, artists, playlists, favourites, queue, lyrics, sleep timer and legal music discovery.</p><div class="hero-actions"><button id="heroAddBtn" class="primary-btn">＋ Add music</button><button id="heroDiscoverBtn" class="secondary-btn">Explore music</button></div></div><div class="hero-disc"><div class="disc-center">U</div></div></div>
+  <div class="quick-grid"><button data-home-action="songs"><b id="songStat">0</b><span>Songs</span></button><button data-home-action="albums"><b id="albumStat">0</b><span>Albums</span></button><button data-home-action="artists"><b id="artistStat">0</b><span>Artists</span></button><button data-home-action="playlists"><b id="playlistStat">0</b><span>Playlists</span></button></div>
+  <div class="section-head"><div><h2>Recently played</h2><p id="recentStatus">Your listening history will appear here.</p></div><button class="text-btn" data-view-link="library">See library →</button></div>
+  <div id="recentGrid" class="track-grid"></div>
+  <div id="emptyState" class="empty-state"><div class="empty-icon">♫</div><h3>Your library is waiting</h3><p>Pick audio files from your phone. They are stored in the app's local music library.</p><button class="secondary-btn" id="emptyAddBtn">Choose music</button></div>
+</section>
+
+<section id="discoverView" class="view">
+ <div class="section-head"><div><p class="eyebrow">DISCOVER</p><h2>Find music</h2><p>Search public catalogue metadata and previews, then open the original service. Download buttons are shown only for sources that expose a downloadable file.</p></div></div>
+ <div class="discover-tabs"><button class="discover-tab active" data-type="all">All</button><button class="discover-tab" data-type="song">Songs</button><button class="discover-tab" data-type="album">Albums</button><button class="discover-tab" data-type="artist">Artists</button></div>
+ <div id="discoverStatus" class="discover-status">Search for an artist, song or album.</div><div id="discoverGrid" class="discover-grid"></div>
+ <div class="section-head"><div><h2>Free & legal downloads</h2><p id="freeDownloadStatus">Search the supported open music source.</p></div></div>
+ <div id="freeDownloadGrid" class="discover-grid"></div>
+</section>
+
+<section id="libraryView" class="view">
+ <div class="section-head"><div><p class="eyebrow">MY MUSIC</p><h2>Library</h2><p>Browse your music by songs, albums, artists or folders.</p></div><button id="rescanBtn" class="secondary-btn">↻ Refresh</button></div>
+ <div class="library-tabs"><button class="library-tab active" data-library-tab="songs">Songs</button><button class="library-tab" data-library-tab="albums">Albums</button><button class="library-tab" data-library-tab="artists">Artists</button><button class="library-tab" data-library-tab="folders">Folders</button><button class="library-tab" data-library-tab="recent">Recently played</button></div>
+ <div id="libraryList" class="library-list"></div>
+</section>
+
+<section id="playlistsView" class="view">
+ <div class="section-head"><div><p class="eyebrow">YOUR COLLECTION</p><h2>Playlists</h2><p>Create mixes and keep separate queues for different moods.</p></div><button id="newPlaylistBtn" class="primary-btn">＋ New playlist</button></div>
+ <div id="playlistList" class="playlist-grid"></div>
+</section>
+
+<section id="favoritesView" class="view">
+ <div class="section-head"><div><p class="eyebrow">LIKED SONGS</p><h2>Favorites</h2><p>Your saved songs, available offline.</p></div></div><div id="favoritesList" class="library-list"></div>
+</section>
+
+<section id="downloadsView" class="view">
+ <div class="section-head"><div><p class="eyebrow">OFFLINE</p><h2>Downloads</h2><p>Downloads started from supported, lawful sources.</p></div></div>
+ <div id="downloadsList" class="library-list"></div>
+ <div class="empty-state" id="downloadInfo"><div class="empty-icon">⇩</div><h3>No downloads yet</h3><p>Universal MP3 Player will not bypass streaming-service protections or download copyrighted music without a lawful download source.</p></div>
+</section>
+
+<section id="settingsView" class="view">
+ <div class="section-head"><div><p class="eyebrow">PLAYER SETTINGS</p><h2>Sound & playback</h2></div></div>
+ <div class="settings-grid">
+  <article class="setting-card"><h3>Equalizer</h3><p>Simple 3-band EQ for the current player.</p><label>Bass <input id="eqBass" type="range" min="-12" max="12" value="0"></label><label>Mid <input id="eqMid" type="range" min="-12" max="12" value="0"></label><label>Treble <input id="eqTreble" type="range" min="-12" max="12" value="0"></label></article>
+  <article class="setting-card"><h3>Playback</h3><label class="check"><input id="shuffleBtn" type="checkbox"> Shuffle</label><label class="check"><input id="repeatBtn" type="checkbox"> Repeat current song</label><label>Sleep timer <select id="sleepTimer"><option value="0">Off</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label></article>
+  <article class="setting-card"><h3>Library</h3><p>Local music is indexed in the app. Your playlists, favourites and listening history are stored on this device.</p><button id="clearHistoryBtn" class="secondary-btn">Clear listening history</button></article>
+ </div>
+</section>
+<input id="fileInput" type="file" accept="audio/*,.mp3,.m4a,.flac,.wav,.ogg,.opus,.aac" multiple hidden>
+</main></div>
+
+<div class="queue-drawer" id="queueDrawer"><div class="queue-head"><strong>Up next</strong><button id="closeQueue" class="icon-btn">×</button></div><div id="queueList"></div></div>
+<div class="player" id="playerBar">
+ <div class="now-playing"><div class="mini-cover" id="miniCover">♫</div><div class="now-text"><strong id="nowTitle">Nothing playing</strong><span id="nowArtist">Choose a song to begin</span></div><button id="likeBtn" class="icon-btn" aria-label="Favorite">♡</button></div>
+ <div class="controls"><div class="control-row"><button id="shufflePlayer" class="icon-btn">⤨</button><button id="prevBtn" class="icon-btn">↶</button><button id="playBtn" class="play-btn">▶</button><button id="nextBtn" class="icon-btn">↷</button><button id="queueBtn" class="icon-btn">☷</button></div><div class="progress-row"><span id="currentTime">0:00</span><input id="progress" type="range" min="0" max="100" value="0"><span id="duration">0:00</span></div></div>
+ <div class="volume"><span>🔊</span><input id="volume" type="range" min="0" max="1" step="0.01" value="0.8"></div>
+</div>
+<audio id="audio" preload="metadata"></audio><script src="app.js"></script></body></html>
