@@ -19,7 +19,7 @@
 <header class="topbar"><div class="mobile-brand"><div class="brand-mark">U</div><strong>Universal MP3</strong></div><label class="search"><span>⌕</span><input id="searchInput" type="search" placeholder="Search your music or discover new songs…" autocomplete="off"></label><button id="addBtn" class="primary-btn">＋ Add music</button></header>
 
 <section id="homeView" class="view active-view">
-  <div class="hero"><div><p class="eyebrow">YOUR MUSIC · YOUR WAY</p><h1>A real music library.</h1><p>Organise local music like a modern streaming player: albums, artists, playlists, favourites, queue, lyrics, sleep timer and legal music discovery.</p><div class="hero-actions"><button id="heroAddBtn" class="primary-btn">＋ Add music</button><button id="heroDiscoverBtn" class="secondary-btn">Explore music</button></div></div><div class="hero-disc"><div class="disc-center">U</div></div></div>
+  <div class="hero"><div><p class="eyebrow">YOUR MUSIC · YOUR WAY</p><h1>A real music library.</h1><p>Automatically scan the music already on your phone, organise it into albums and artists, play it immediately, and discover downloadable music from supported legal sources.</p><div class="hero-actions"><button id="heroAddBtn" class="primary-btn">＋ Add music</button><button id="heroDiscoverBtn" class="secondary-btn">Explore music</button></div></div><div class="hero-disc"><div class="disc-center">U</div></div></div>
   <div class="quick-grid"><button data-home-action="songs"><b id="songStat">0</b><span>Songs</span></button><button data-home-action="albums"><b id="albumStat">0</b><span>Albums</span></button><button data-home-action="artists"><b id="artistStat">0</b><span>Artists</span></button><button data-home-action="playlists"><b id="playlistStat">0</b><span>Playlists</span></button></div>
   <div class="section-head"><div><h2>Recently played</h2><p id="recentStatus">Your listening history will appear here.</p></div><button class="text-btn" data-view-link="library">See library →</button></div>
   <div id="recentGrid" class="track-grid"></div>
@@ -60,7 +60,7 @@
  <div class="settings-grid">
   <article class="setting-card"><h3>Equalizer</h3><p>Simple 3-band EQ for the current player.</p><label>Bass <input id="eqBass" type="range" min="-12" max="12" value="0"></label><label>Mid <input id="eqMid" type="range" min="-12" max="12" value="0"></label><label>Treble <input id="eqTreble" type="range" min="-12" max="12" value="0"></label></article>
   <article class="setting-card"><h3>Playback</h3><label class="check"><input id="shuffleBtn" type="checkbox"> Shuffle</label><label class="check"><input id="repeatBtn" type="checkbox"> Repeat current song</label><label>Sleep timer <select id="sleepTimer"><option value="0">Off</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label></article>
-  <article class="setting-card"><h3>Library</h3><p>Local music is indexed in the app. Your playlists, favourites and listening history are stored on this device.</p><button id="clearHistoryBtn" class="secondary-btn">Clear listening history</button></article>
+  <article class="setting-card"><h3>Library</h3><p>Universal MP3 Player automatically scans your phone through Android MediaStore. You do not need to add every MP3 manually. Imported files are also supported.</p><button id="clearHistoryBtn" class="secondary-btn">Clear listening history</button></article>
  </div>
 </section>
 <input id="fileInput" type="file" accept="audio/*,.mp3,.m4a,.flac,.wav,.ogg,.opus,.aac" multiple hidden>
