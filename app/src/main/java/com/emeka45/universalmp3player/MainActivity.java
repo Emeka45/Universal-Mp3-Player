@@ -30,6 +30,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -58,8 +60,39 @@ public class MainActivity extends Activity {
                     try {
                         long mediaId=Long.parseLong(uri.getPath().substring("/media/".length()));
                         Uri collection=Build.VERSION.SDK_INT>=29?MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL):MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-                        InputStream stream=getContentResolver().openInputStream(ContentUris.withAppendedId(collection,mediaId));
-                        if(stream!=null) return new WebResourceResponse("audio/mpeg",null,stream);
+                        Uri mediaUri = ContentUris.withAppendedId(collection, mediaId);
+                        String mime = getContentResolver().getType(mediaUri);
+                        if (mime == null) mime = "audio/mpeg";
+                        android.os.ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(mediaUri, "r");
+                        if (pfd == null) return null;
+                        long length = pfd.getStatSize();
+                        String range = request.getRequestHeaders().get("Range");
+                        long start = 0, end = length > 0 ? length - 1 : -1;
+                        int status = 200; String reason = "OK";
+                        if (range != null && range.startsWith("bytes=") && length > 0) {
+                            String spec = range.substring(6).split(",")[0].trim();
+                            if (spec.startsWith("-")) start = Math.max(0, length - Long.parseLong(spec.substring(1)));
+                            else {
+                                String[] parts = spec.split("-");
+                                start = Long.parseLong(parts[0]);
+                                if (parts.length > 1 && !parts[1].isEmpty()) end = Math.min(length - 1, Long.parseLong(parts[1]));
+                            }
+                            if (start >= length) { pfd.close(); Map<String,String> h=new HashMap<>(); h.put("Content-Range","bytes */"+length); return new WebResourceResponse(mime,null,416,"Range Not Satisfiable",h,null); }
+                            status=206; reason="Partial Content";
+                        }
+                        long contentLength = end >= start ? end-start+1 : length;
+                        java.io.FileInputStream fis = new java.io.FileInputStream(pfd.getFileDescriptor());
+                        if (start > 0) fis.skip(start);
+                        Map<String,String> headers=new HashMap<>();
+                        headers.put("Accept-Ranges","bytes");
+                        headers.put("Content-Length",String.valueOf(contentLength));
+                        headers.put("Content-Range","bytes "+start+"-"+end+"/"+length);
+                        return new WebResourceResponse(mime,null,status,reason,headers,new java.io.FilterInputStream(fis) {
+                            long remaining=contentLength;
+                            public int read() throws java.io.IOException { if(remaining<=0)return -1; int v=super.read(); if(v>=0)remaining--; return v; }
+                            public int read(byte[] b,int off,int len) throws java.io.IOException { if(remaining<=0)return -1; int n=super.read(b,off,(int)Math.min(len,remaining)); if(n>0)remaining-=n; return n; }
+                            public void close() throws java.io.IOException { super.close(); try{pfd.close();}catch(Exception ignored){} }
+                        });
                     } catch(Exception ignored) {}
                 }
                 if ("content".equalsIgnoreCase(uri.getScheme()) && "media".equalsIgnoreCase(uri.getAuthority())) {
@@ -147,7 +180,7 @@ public class MainActivity extends Activity {
                     o.put("folder",pathCol>=0 && !c.isNull(pathCol)?c.getString(pathCol):"Music");
                     o.put("duration",c.isNull(durationCol)?0:c.getLong(durationCol)/1000.0);
                     o.put("mime",c.isNull(mimeCol)?"audio/mpeg":c.getString(mimeCol));
-                    o.put("url", ContentUris.withAppendedId(collection,id).toString());
+                    o.put("url", "https://universal.local/media/"+id);
                     o.put("native",true);
                     out.put(o);
                 }
