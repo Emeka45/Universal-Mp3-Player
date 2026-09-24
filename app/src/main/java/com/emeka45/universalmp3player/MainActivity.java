@@ -147,7 +147,7 @@ public class MainActivity extends Activity {
                     o.put("folder",pathCol>=0 && !c.isNull(pathCol)?c.getString(pathCol):"Music");
                     o.put("duration",c.isNull(durationCol)?0:c.getLong(durationCol)/1000.0);
                     o.put("mime",c.isNull(mimeCol)?"audio/mpeg":c.getString(mimeCol));
-                    o.put("url","https://universal.local/media/"+id);
+                    o.put("url", ContentUris.withAppendedId(collection,id).toString());
                     o.put("native",true);
                     out.put(o);
                 }
