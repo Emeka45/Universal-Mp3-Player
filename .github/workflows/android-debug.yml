@@ -21,25 +21,28 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle
+      - name: Set up Gradle 8.13
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
 
-      - name: Inspect project
+      - name: Verify Android project
         run: |
-          echo "Repository files:"
-          find . -maxdepth 3 -type f | sort
-          echo "Gradle files:"
-          find . -name 'build.gradle*' -o -name 'settings.gradle*' | sort
+          test -f settings.gradle
+          test -f build.gradle
+          test -f app/build.gradle
+          test -f app/src/main/AndroidManifest.xml
+          test -f app/src/main/java/com/emeka45/universalmp3player/MainActivity.java
+          test -f app/src/main/assets/index.html
+          echo "Android project structure verified"
 
       - name: Build debug APK
-        run: gradle assembleDebug --stacktrace
+        run: gradle :app:assembleDebug --stacktrace --no-daemon
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: universal-mp3-player-debug
-          path: '**/build/outputs/apk/debug/*.apk'
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
